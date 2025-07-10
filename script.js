@@ -1,99 +1,72 @@
+const form = document.getElementById("registrationForm");
+const shareBtn = document.getElementById("shareBtn");
+const shareCountText = document.getElementById("shareCount");
+const submitBtn = document.getElementById("submitBtn");
+const message = document.getElementById("message");
 
-/* -----------------------------------------------------------
-   Tech‑for‑Girls – script.js  (v1.1)
-   -----------------------------------------------------------
-   – Counts WhatsApp shares (5×) with localStorage
-   – Sends form data + file to Google Apps Script Web App
-   – Prevents duplicate submissions
-   – Shows success banner or error alert
------------------------------------------------------------ */
+const ENDPOINT = "https://script.google.com/macros/s/YOUR_DEPLOYED_SCRIPT_ID_HERE/exec";
 
-// ---------- 1.  DOM  Handles ----------
-const shareBtn   = document.getElementById('shareBtn');
-const counterTxt = document.getElementById('counterText');
-const submitBtn  = document.getElementById('submitBtn');
-const formEl     = document.getElementById('regForm');
-const thanksMsg  = document.getElementById('thanksMsg');
+let shareCount = localStorage.getItem("shareCount") || 0;
+shareCount = parseInt(shareCount);
+updateShareUI();
 
-// ---------- 2.  Config ----------
-/*  << Paste YOUR live Web App URL between the quotes >>  */
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbwBtp1om1KD5sChoXsQLWdTkcYY7mwJ0fCIEZj8R4zVZT2_3UHE-BdQpeEKmbo1Wy8H/exec";
-
-// ---------- 3.  State from localStorage ----------
-let shareCount   = +localStorage.getItem('tfg-share')     || 0;
-let alreadySent  =  localStorage.getItem('tfg-submitted') === 'yes';
-
-// ---------- 4.  Init ----------
-updateCounter();
-if (alreadySent) freezeForm();      // Disable everything if already submitted
-
-// ---------- 5.  WhatsApp Share Button ----------
-shareBtn.addEventListener('click', () => {
-  if (shareCount >= 5) return;      // Guard if already done
-  const text = encodeURIComponent("Hey Buddy, join the Tech For Girls Community 💖");
-  window.open(`https://wa.me/?text=${text}`, '_blank');
-
-  shareCount++;
-  localStorage.setItem('tfg-share', shareCount);
-  updateCounter();
-});
-
-function updateCounter() {
-  counterTxt.textContent = `Click count: ${shareCount}/5`;
+function updateShareUI() {
+  shareCountText.textContent = `Click count: ${shareCount}/5`;
   if (shareCount >= 5) {
-    counterTxt.textContent += ' ✅';
-    submitBtn.disabled = false;
-    shareBtn.classList.add('disabled');
+    shareBtn.disabled = true;
+    shareCountText.textContent = "Sharing complete. Please continue.";
   }
 }
 
-// ---------- 6.  Submit Handler ----------
-formEl.addEventListener('submit', async (e) => {
+shareBtn.addEventListener("click", () => {
+  if (shareCount < 5) {
+    const message = encodeURIComponent("Hey buddy, join Tech For Girls Community!");
+    const link = `https://wa.me/?text=${message}`;
+    window.open(link, "_blank");
+    shareCount++;
+    localStorage.setItem("shareCount", shareCount);
+    updateShareUI();
+  }
+});
+
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   if (shareCount < 5) {
-    alert("Please share on WhatsApp 5 times before submitting.");
+    alert("Please share on WhatsApp at least 5 times before submitting.");
     return;
   }
 
-  // Build multipart/form‑data
-  const fd = new FormData(formEl);
+  const formData = new FormData(form);
 
-  // UI feedback
-  submitBtn.textContent = "Submitting…";
   submitBtn.disabled = true;
+  submitBtn.textContent = "Submitting...";
 
   try {
-    /* --- 6.1  Send to Google Apps Script --- */
-    const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      body: formData
+    });
 
-    /* --- 6.2  Handle response --- */
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Server responded ${res.status}: ${txt}`);
+    const text = await res.text();
+    if (text === "OK") {
+      message.textContent = "🎉 Your submission has been recorded. Thanks for being part of Tech for Girls!";
+      form.querySelectorAll("input, button").forEach(el => el.disabled = true);
+      localStorage.setItem("submitted", "true");
+    } else {
+      throw new Error(text);
     }
-
-    // Success!
-    localStorage.setItem('tfg-submitted', 'yes');
-    freezeForm();
-    console.log("✅ Form submitted successfully");
-
   } catch (err) {
     console.error("🚨 Submit failed:", err);
-    alert("Submit failed: " + err.message);
+    alert("Something went wrong. Please try again.");
+    submitBtn.disabled = false;
     submitBtn.textContent = "Submit Registration";
-    submitBtn.disabled  = false;
   }
 });
 
-/* ---------- 7.  Utility: Freeze Form After Submit ---------- */
-function freezeForm() {
-  // Hide interactive elements
-  formEl.reset();
-  formEl.classList.add('disabled');
-  shareBtn.style.display   = 'none';
-  counterTxt.style.display = 'none';
-  submitBtn.style.display  = 'none';
-  // Show thank‑you banner
-  thanksMsg.style.display  = 'block';
+// Disable form if already submitted
+if (localStorage.getItem("submitted")) {
+  form.querySelectorAll("input, button").forEach(el => el.disabled = true);
+  message.textContent = "🎉 Your submission has already been recorded.";
 }
+
