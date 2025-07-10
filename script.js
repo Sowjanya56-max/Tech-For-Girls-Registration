@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log([...formData.entries()]);
 
     try {
-      const response = await fetch("https://script.google.com/macros/s/AKfycbydjoj2jXpEAWMJ10wC4f6IevO8hwWJsxhjRbYcT_MnuuvdXcnT_pivOmeaaOsVfxd5/exec", {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbxL4yK2ttlG2Pk9-dr342LTOVBGZqCqiM1MykVbXFw3xgb9b19B32Y9Un0pcJ9yFLJh/execc", {
         method: "POST",
         body: formData,
       });
@@ -96,6 +96,8 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit Registration";
     }
+  });
+});
   });
 });
 
