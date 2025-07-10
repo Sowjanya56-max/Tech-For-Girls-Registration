@@ -1,72 +1,102 @@
-const form = document.getElementById("registrationForm");
-const shareBtn = document.getElementById("shareBtn");
-const shareCountText = document.getElementById("shareCount");
-const submitBtn = document.getElementById("submitBtn");
-const message = document.getElementById("message");
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("registrationForm");
+  const shareBtn = document.getElementById("shareBtn");
+  const submitBtn = document.getElementById("submitBtn");
+  const shareCountDisplay = document.getElementById("shareCount");
+  const message = document.getElementById("message");
 
-const ENDPOINT = "https://script.google.com/macros/s/YOUR_DEPLOYED_SCRIPT_ID_HERE/exec";
+  let shareCount = parseInt(localStorage.getItem("shareCount")) || 0;
+  const hasSubmitted = localStorage.getItem("hasSubmitted") === "true";
 
-let shareCount = localStorage.getItem("shareCount") || 0;
-shareCount = parseInt(shareCount);
-updateShareUI();
-
-function updateShareUI() {
-  shareCountText.textContent = `Click count: ${shareCount}/5`;
-  if (shareCount >= 5) {
-    shareBtn.disabled = true;
-    shareCountText.textContent = "Sharing complete. Please continue.";
-  }
-}
-
-shareBtn.addEventListener("click", () => {
-  if (shareCount < 5) {
-    const message = encodeURIComponent("Hey buddy, join Tech For Girls Community!");
-    const link = `https://wa.me/?text=${message}`;
-    window.open(link, "_blank");
-    shareCount++;
-    localStorage.setItem("shareCount", shareCount);
-    updateShareUI();
-  }
-});
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  if (shareCount < 5) {
-    alert("Please share on WhatsApp at least 5 times before submitting.");
+  // Prevent form resubmission
+  if (hasSubmitted) {
+    form.querySelectorAll("input, button").forEach(el => el.disabled = true);
+    message.textContent = "🎉 Your submission has been recorded. Thanks for being part of Tech for Girls!";
     return;
   }
 
-  const formData = new FormData(form);
-
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Submitting...";
-
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: "POST",
-      body: formData
-    });
-
-    const text = await res.text();
-    if (text === "OK") {
-      message.textContent = "🎉 Your submission has been recorded. Thanks for being part of Tech for Girls!";
-      form.querySelectorAll("input, button").forEach(el => el.disabled = true);
-      localStorage.setItem("submitted", "true");
-    } else {
-      throw new Error(text);
+  // Update WhatsApp sharing UI
+  function updateShareUI() {
+    shareCountDisplay.textContent = `Click count: ${shareCount}/5`;
+    if (shareCount >= 5) {
+      message.textContent = "Sharing complete. Please continue.";
     }
-  } catch (err) {
-    console.error("🚨 Submit failed:", err);
-    alert("Something went wrong. Please try again.");
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit Registration";
   }
+
+  updateShareUI();
+
+  // WhatsApp Share Button
+  shareBtn.addEventListener("click", () => {
+    if (shareCount < 5) {
+      const shareText = "Hey buddy, join Tech For Girls Community! 💖 https://sowjanya56-max.github.io/";
+      const whatsappURL = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
+      window.open(whatsappURL, '_blank');
+
+      shareCount++;
+      localStorage.setItem("shareCount", shareCount);
+      updateShareUI();
+    }
+
+    if (shareCount >= 5) {
+      shareBtn.textContent = "✅ Shared";
+      shareBtn.disabled = true;
+    }
+  });
+
+  // Form Submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (shareCount < 5) {
+      alert("Please share on WhatsApp 5 times before submitting.");
+      return;
+    }
+
+    const name = form.name.value.trim();
+    const phone = form.phone.value.trim();
+    const email = form.email.value.trim();
+    const college = form.college.value.trim();
+    const screenshot = form.screenshot.files[0];
+
+    if (!name || !phone || !email || !college || !screenshot) {
+      alert("Please fill all fields and upload the screenshot.");
+      return;
+    }
+
+    submitBtn.textContent = "Submitting...";
+    submitBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("phone", phone);
+    formData.append("email", email);
+    formData.append("college", college);
+    formData.append("screenshot", screenshot);
+
+    // ✅ DEBUG: Check what’s inside formData
+    console.log([...formData.entries()]);
+
+    try {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbydjoj2jXpEAWMJ10wC4f6IevO8hwWJsxhjRbYcT_MnuuvdXcnT_pivOmeaaOsVfxd5/exec", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        message.textContent = "🎉 Your submission has been recorded. Thanks for being part of Tech for Girls!";
+        localStorage.setItem("hasSubmitted", "true");
+        form.querySelectorAll("input, button").forEach(el => el.disabled = true);
+      } else {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error("🚨 Submit failed:", err);
+      alert("Submit failed: " + err.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Registration";
+    }
+  });
 });
 
-// Disable form if already submitted
-if (localStorage.getItem("submitted")) {
-  form.querySelectorAll("input, button").forEach(el => el.disabled = true);
-  message.textContent = "🎉 Your submission has already been recorded.";
-}
 
